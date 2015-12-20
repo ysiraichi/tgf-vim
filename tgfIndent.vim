@@ -1,7 +1,15 @@
 " indent/tgf.vim
 
 setlocal indentexpr=TgfIndent()
-setlocal indentkeys==end,=in,=let,=if,e,=then,O,o
+setlocal indentkeys==end,=in,=int,=let,=if,e,=then,O,o,0(,0),0{,0}
+
+function! Regexfy(char)
+  if (a:char =~ '\v[\{\}\(\)]')
+    return a:char
+  else
+    return "\\\<" . a:char . "\\\>"
+  endif
+endfunction
 
 function! IncrementIndent(line)
   return indent(a:line) + &shiftwidth 
@@ -26,10 +34,11 @@ function! FindLast(...)
   while IsNotOver(a:000, times)
     let pNum  = prevnonblank(pNum-1)
     let pLine = getline(pNum)
+    echom "FindLast(pLine): " . pLine
     for i in a:000
-      let iStr = "\\\<" . i . "\\\>"
-      if pLine =~ iStr
+      if pLine =~ Regexfy(i)
         let times[i] = times[i] + 1
+        echom "times[" . i . "] : " . times[i]
       endif
     endfor
     if pNum == 1
@@ -52,15 +61,19 @@ function! TgfIndent()
   let synCount['var'] = 0
   let synCount['function'] = 0
   let synCount['type'] = 0
+  let synCount['{'] = 0
+  let synCount['}'] = 0
+  let synCount['('] = 0
+  let synCount[')'] = 0
 
   let pNum  = prevnonblank(v:lnum - 1)
   let pLine = getline(pNum)
 
-  echom thisLine
+  echom "tL: " . thisLine
+  echom "pL: " . pLine
 
   " If the current line has any keywords
   if (thisLine !~ '\<let\>' && (thisLine =~ '\<in\>' || thisLine =~ '\<end\>'))
-    echom "OK"
     let lastN = FindLast('let', 'in', 'end')
     return indent(lastN)
   endif
@@ -68,9 +81,20 @@ function! TgfIndent()
   if (thisLine !~ '\<if\>' && thisLine =~ '\<else\>')
     let lastN = FindLast('if', 'then', 'else')
     return indent(lastN)
-    echom "LastN = " . lastN . " indent:" . indent(lastN)
   elseif (thisLine !~ '\<if\>' && thisLine =~ '\<then\>')
     return IncrementIndent(FindLast('if', 'then'))
+  endif
+
+  if (thisLine =~ '\v^\ *[\{\(]\ *$')
+    return indent(pNum)
+  endif
+  if (thisLine =~ '\v^\ *\}\ *$')
+    let lastN = indent(FindLast('{', '}'))
+    echom "lN: " . lastN
+    return lastN
+  endif
+  if (thisLine =~ '\v^\ *\)\ *$')
+    return indent(FindLast('(', ')'))
   endif
     
   " If the parent line has this specific keywords
@@ -86,12 +110,14 @@ function! TgfIndent()
   if (pLine =~ '\<else\>' && pLine =~ '\Velse\ \*\$')
     return IncrementIndent(pNum)
   endif
+  if (pLine =~ '{' && pLine !~ '}') || (pLine =~ '(' && pLine !~ ')')
+    return IncrementIndent(pNum)
+  endif
 
   " Find where we are
   while pNum > 0 
     for i in keys(synCount)
-      let iStr = "\\\<" . i . "\\\>"
-      if pLine =~ iStr
+      if pLine =~ Regexfy(i)
         let synCount[i] = synCount[i] + 1
       endif
     endfor
@@ -101,6 +127,10 @@ function! TgfIndent()
     endif
 
     if (synCount['in'] > synCount['end']) || (synCount['let'] > synCount['in'])
+      return IncrementIndent(pNum)
+    endif
+
+    if (synCount['('] > synCount[')']) || (synCount['{'] > synCount['}'])
       return IncrementIndent(pNum)
     endif
 
