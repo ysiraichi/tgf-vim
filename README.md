@@ -13,6 +13,6 @@ $ make
 And add the following line to your .vimrc:
 
 ```vim
-au BufRead,BufNewFile *.tgf set filetype=tgf
+au BufRead,BufNewFile *.tgf setfiletype=tgf
 ```
 
