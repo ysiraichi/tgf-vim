@@ -9,8 +9,8 @@ endif
 
 " Keywords
 syn keyword tgfTypes int string float answer
-syn keyword tgfDef   let in end
-syn keyword tgfDecl  array of nil if then else
+syn keyword tgfDef   let in end if then else 
+syn keyword tgfDecl  array of nil
 syn keyword tgfFDecl function var type
 
 " Matches
@@ -38,5 +38,4 @@ hi def link tgfNum   Constant
 hi def link tgfFDecl Function
 hi def link tgfOtOp  Ignore
 
-
-let b:current_syntax = "pf-tiger"
+let b:current_syntax = "tgf"
